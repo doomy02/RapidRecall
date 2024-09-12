@@ -121,7 +121,7 @@ button[disabled] {
     margin-bottom: 15px;
 }
 
-#save-questions-btn, #upload-questions-btn, #add-question-btn, #save-quiz-btn {
+#save-questions-btn, #upload-questions-btn, #add-question-btn, #save-quiz-btn, #edit-btn, #back-btn {
     text-align: center;
     background-color: #001e4d;
     color: #fff;
@@ -206,7 +206,7 @@ input[type="file"]::file-selector-button:hover {
     display: block;
     margin: 20px auto;
     padding: 10px;
-    width: 150px;
+    width: 100%;
     background-color: #001e4d;
     color: #fff;
     border: none;

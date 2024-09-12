@@ -9,11 +9,21 @@ const startQuizBtn = document.getElementById("start-quiz-btn");
 const saveQuestionsBtn = document.getElementById("save-questions-btn");
 const uploadQuestionsBtn = document.getElementById("upload-questions-btn");
 const uploadQuestionsInput = document.getElementById("upload-questions-input");
+const editQuestionSelect = document.createElement("select");
+editQuestionSelect.id = "edit-question-select";
+const backButton = document.getElementById("back-btn");
+
+// Use the existing Edit button for confirming edits
+const editButton = document.getElementById("edit-btn");
+const addQuestionBtn = document.getElementById("add-question-btn");
 
 // Initialize an empty array to store questions
 let questions = [];
 let currentQuestionIndex = 0; // Index of the current question
 let score = 0; // User's score
+
+let isEditing = false; // Track if we are in edit mode
+let editIndex = -1; // Track which question is being edited
 
 // Cache form elements used for adding questions
 const questionForm = document.getElementById("question-form");
@@ -24,69 +34,232 @@ const answer3Input = document.getElementById("answer3-input");
 const answer4Input = document.getElementById("answer4-input");
 const correctAnswerSelect = document.getElementById("correct-answer");
 
-// Modify to handle images in the form
-questionForm.addEventListener("submit", (e) => {
+// Hide the Edit button initially
+editButton.style.display = "none";
+
+// Insert dropdown to select question to edit
+const editSection = document.createElement("div");
+editSection.innerHTML = `<h2>Edit Questions</h2>`;
+homePage.insertBefore(editSection, questionForm);
+editSection.appendChild(editQuestionSelect);
+
+// Populate dropdown with question titles
+function populateEditDropdown() {
+    editQuestionSelect.innerHTML = "";
+    const defaultOption = document.createElement("option");
+    defaultOption.text = "Select a question to edit";
+    defaultOption.disabled = true;
+    defaultOption.selected = true;
+    editQuestionSelect.appendChild(defaultOption);
+
+    questions.forEach((question, index) => {
+        const option = document.createElement("option");
+        option.text = question.question;
+        option.value = index;
+        editQuestionSelect.appendChild(option);
+    });
+}
+
+// Populate dropdown with question titles
+function populateEditDropdown() {
+    editQuestionSelect.innerHTML = "";
+    const defaultOption = document.createElement("option");
+    defaultOption.text = "Select a question to edit";
+    defaultOption.disabled = true;
+    defaultOption.selected = true;
+    editQuestionSelect.appendChild(defaultOption);
+
+    questions.forEach((question, index) => {
+        const option = document.createElement("option");
+        option.text = question.question;
+        option.value = index;
+        editQuestionSelect.appendChild(option);
+    });
+}
+
+// Handle edit dropdown selection change
+editQuestionSelect.addEventListener("change", () => {
+    const selectedQuestionIndex = editQuestionSelect.value;
+    if (selectedQuestionIndex !== "") {
+        loadQuestionForEditing(selectedQuestionIndex);
+    }
+});
+
+// Load selected question into the form for editing
+function loadQuestionForEditing(index) {
+    const currentQuestion = questions[index];
+    
+    // Populate the form with the current question's data for editing
+    questionInput.value = currentQuestion.question;
+    document.getElementById("question-image-input").value = ""; // Reset image file input
+
+    answer1Input.value = currentQuestion.answers[0].text;
+    answer2Input.value = currentQuestion.answers[1].text;
+    answer3Input.value = currentQuestion.answers[2].text;
+    answer4Input.value = currentQuestion.answers[3].text;
+
+    correctAnswerSelect.value = currentQuestion.answers.findIndex(answer => answer.correct);
+
+    isEditing = true;
+    editIndex = index;
+
+    // Show Edit button and change its text to "Confirm Edit"
+    editButton.style.display = "block";
+    editButton.innerText = "Confirm Edit";
+}
+
+// Helper function to convert image to Base64
+function convertImageToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result); // reader.result contains Base64 string
+        reader.onerror = reject;
+        reader.readAsDataURL(file); // Convert image to Base64
+    });
+}
+
+/// Modify the question form submit handler
+questionForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const questionText = questionInput.value;
-
-    // Process question image
+    
+    // Process question image as Base64
+    let questionImageBase64 = "";
     const questionImageFile = document.getElementById("question-image-input").files[0];
-    let questionImageURL = "";
     if (questionImageFile) {
-        questionImageURL = URL.createObjectURL(questionImageFile);
+        questionImageBase64 = await convertImageToBase64(questionImageFile);
     }
 
-    const answers = [
+    const answers = await Promise.all([
         {
             text: answer1Input.value,
-            image: document.getElementById("answer1-image-input").files[0] ? URL.createObjectURL(document.getElementById("answer1-image-input").files[0]) : "",
+            image: document.getElementById("answer1-image-input").files[0] ? await convertImageToBase64(document.getElementById("answer1-image-input").files[0]) : "",
             correct: correctAnswerSelect.value == "0"
         },
         {
             text: answer2Input.value,
-            image: document.getElementById("answer2-image-input").files[0] ? URL.createObjectURL(document.getElementById("answer2-image-input").files[0]) : "",
+            image: document.getElementById("answer2-image-input").files[0] ? await convertImageToBase64(document.getElementById("answer2-image-input").files[0]) : "",
             correct: correctAnswerSelect.value == "1"
         },
         {
             text: answer3Input.value,
-            image: document.getElementById("answer3-image-input").files[0] ? URL.createObjectURL(document.getElementById("answer3-image-input").files[0]) : "",
+            image: document.getElementById("answer3-image-input").files[0] ? await convertImageToBase64(document.getElementById("answer3-image-input").files[0]) : "",
             correct: correctAnswerSelect.value == "2"
         },
         {
             text: answer4Input.value,
-            image: document.getElementById("answer4-image-input").files[0] ? URL.createObjectURL(document.getElementById("answer4-image-input").files[0]) : "",
+            image: document.getElementById("answer4-image-input").files[0] ? await convertImageToBase64(document.getElementById("answer4-image-input").files[0]) : "",
             correct: correctAnswerSelect.value == "3"
         }
-    ];
+    ]);
 
-    // Add the new question (including images) to the questions array
-    questions.push({ question: questionText, image: questionImageURL, answers: answers });
+    // Add the new question (including Base64 images) to the questions array
+    questions.push({ question: questionText, image: questionImageBase64, answers: answers });
 
     // Clear form fields
+    clearFormFields();
+});
+
+// Handle Confirm Edit button click
+editButton.addEventListener("click", async () => {
+    if (isEditing && editIndex !== -1) {
+        // Get the current question's image before potentially overwriting it
+        const originalQuestionImage = questions[editIndex].image;
+
+        // Check if a new question image is uploaded; if not, keep the existing one
+        let updatedQuestionImage = originalQuestionImage;
+        const newQuestionImageFile = document.getElementById("question-image-input").files[0];
+        if (newQuestionImageFile) {
+            updatedQuestionImage = await convertImageToBase64(newQuestionImageFile);
+        }
+
+        // Update the existing question with edited data
+        questions[editIndex] = {
+            question: questionInput.value,
+            image: updatedQuestionImage,  // Keep original image if no new image is selected
+            answers: [
+                {
+                    text: answer1Input.value,
+                    image: document.getElementById("answer1-image-input").files[0]
+                        ? await convertImageToBase64(document.getElementById("answer1-image-input").files[0])
+                        : questions[editIndex].answers[0].image,  // Keep original answer image if no new image is selected
+                    correct: correctAnswerSelect.value == "0"
+                },
+                {
+                    text: answer2Input.value,
+                    image: document.getElementById("answer2-image-input").files[0]
+                        ? await convertImageToBase64(document.getElementById("answer2-image-input").files[0])
+                        : questions[editIndex].answers[1].image,
+                    correct: correctAnswerSelect.value == "1"
+                },
+                {
+                    text: answer3Input.value,
+                    image: document.getElementById("answer3-image-input").files[0]
+                        ? await convertImageToBase64(document.getElementById("answer3-image-input").files[0])
+                        : questions[editIndex].answers[2].image,
+                    correct: correctAnswerSelect.value == "2"
+                },
+                {
+                    text: answer4Input.value,
+                    image: document.getElementById("answer4-image-input").files[0]
+                        ? await convertImageToBase64(document.getElementById("answer4-image-input").files[0])
+                        : questions[editIndex].answers[3].image,
+                    correct: correctAnswerSelect.value == "3"
+                }
+            ]
+        };
+
+        // Exit edit mode and clear the form
+        isEditing = false;
+        editIndex = -1;
+
+        // Hide the Edit button and reset its text
+        editButton.style.display = "none";
+        editButton.innerText = "Edit";
+
+        populateEditDropdown(); // Refresh dropdown with updated questions
+        clearFormFields();
+        alert("Question updated successfully!");
+    }
+});
+
+
+// Function to clear form fields after submission
+function clearFormFields() {
     questionInput.value = "";
     document.getElementById("question-image-input").value = "";
     answer1Input.value = "";
-    document.getElementById("answer1-image-input").value = "";
     answer2Input.value = "";
-    document.getElementById("answer2-image-input").value = "";
     answer3Input.value = "";
-    document.getElementById("answer3-image-input").value = "";
     answer4Input.value = "";
-    document.getElementById("answer4-image-input").value = "";
-    correctAnswerSelect.value = "0";
+    correctAnswerSelect.value = "";
+}
+
+// Function to start the quiz and hide the home page
+startQuizBtn.addEventListener("click", () => {
+    homePage.style.display = "none";
+    quizApp.style.display = "block";
+    score = 0; // Reset score
+    currentQuestionIndex = 0; // Reset question index
+    showQuestion();
 });
 
-// Start the quiz when the "Start Quiz" button is clicked
-startQuizBtn.addEventListener("click", () => {
-    if (questions.length > 0) {
-        homePage.style.display = "none"; // Hide the home page
-        quizApp.style.display = "block"; // Show the quiz application
-        startQuiz();
-    } else {
-        alert("Please add at least one question!"); // Alert if no questions are added
-    }
-});
+// Function to show the current question
+function showQuestion() {
+    // Display the current question and its answers
+    const question = questions[currentQuestionIndex];
+    questionElement.textContent = question.question;
+    answerButtons.innerHTML = "";
+
+    question.answers.forEach((answer, index) => {
+        const button = document.createElement("button");
+        button.textContent = answer.text;
+        button.classList.add("btn");
+        button.addEventListener("click", () => selectAnswer(index));
+        answerButtons.appendChild(button);
+    });
+}
 
 // Initialize quiz settings and display the first question
 function startQuiz() {
@@ -96,7 +269,13 @@ function startQuiz() {
     showQuestion();
 }
 
-// Display question and answers including images
+// Event listener for Back to Menu button
+backButton.addEventListener("click", () => {
+    quizApp.style.display = "none";  // Hide the quiz section
+    homePage.style.display = "block";  // Show the home page
+});
+
+// Modify the showQuestion function to handle Base64 images
 function showQuestion() {
     resetState();
 
@@ -106,7 +285,7 @@ function showQuestion() {
     // Set the question text
     questionContainer.innerHTML = `<h2>${questionNo}. ${currentQuestion.question}</h2>`;
 
-    // Display question image if available
+    // Display Base64 question image if available
     if (currentQuestion.image) {
         const questionImageElement = document.createElement("img");
         questionImageElement.src = currentQuestion.image;
@@ -125,7 +304,7 @@ function showQuestion() {
         answerText.innerHTML = answer.text;
         button.appendChild(answerText);
 
-        // Add answer image if available
+        // Add Base64 answer image if available
         if (answer.image) {
             const answerImageElement = document.createElement("img");
             answerImageElement.src = answer.image;
@@ -171,82 +350,103 @@ function selectAnswer(e) {
 
     // Disable other answer buttons and highlight the correct one
     Array.from(answerButtons.children).forEach(button => {
+        button.disabled = true;
         if (button.dataset.correct === "true") {
             button.classList.add("correct");
-        } else {
-            button.disabled = true;
         }
     });
 
     nextButton.style.display = "block"; // Show the "Next" button
 }
 
-// Display the final score and offer to play again
+// Display the user's score at the end of the quiz
 function showScore() {
-    resetState();
-    questionContainer.innerHTML = `You scored ${score} out of ${questions.length}!`;
-    nextButton.innerHTML = "Play again!";
-    nextButton.style.display = "block";
+    resetState(); // Clear the previous state (answers, buttons)
+    questionContainer.innerHTML = `<h2>You scored ${score} out of ${questions.length}!</h2>`; // Show the score
+    nextButton.innerHTML = "Play Again"; // Change the button text to "Play Again"
+    nextButton.style.display = "block"; // Show the "Play Again" button
 }
 
-// Handle the "Next" button click to advance through questions or restart the quiz
-function handleNextButton() {
-    currentQuestionIndex++;
-    if (currentQuestionIndex < questions.length) {
-        showQuestion();
-    } else {
-        showScore();
-    }
-}
-
-// Add event listener for the "Next" button
 nextButton.addEventListener("click", () => {
-    if (currentQuestionIndex < questions.length) {
-        handleNextButton();
+    if (nextButton.innerHTML === "Play Again") {
+        startQuiz(); // Restart the quiz when "Play Again" is clicked
     } else {
-        startQuiz(); // Restart the quiz after displaying the score
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questions.length) {
+            resetState(); // Clear previous state (answers, buttons)
+            showQuestion(); // Display the next question
+        } else {
+            showScore(); // Show final score when quiz is complete
+        }
     }
 });
 
-// Save questions to a JSON file
+// Handle Save Questions button click
 saveQuestionsBtn.addEventListener("click", () => {
-    if (questions.length > 0) {
-        const questionsBlob = new Blob([JSON.stringify(questions, null, 2)], { type: 'application/json' });
-        const downloadLink = document.createElement('a');
-        downloadLink.href = URL.createObjectURL(questionsBlob);
-        downloadLink.download = "questions.json";
-        downloadLink.click();
-    } else {
-        alert("No questions to save!"); // Alert if there are no questions to save
-    }
+    const jsonString = JSON.stringify(questions);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "questions.json";
+    a.click();
+    URL.revokeObjectURL(url);
 });
 
-// Trigger the file input to upload questions
+// Upload questions from a JSON file
 uploadQuestionsBtn.addEventListener("click", () => {
-    uploadQuestionsInput.click();
+    uploadQuestionsInput.click(); // Trigger the file input click event
 });
 
-// Load questions from a selected JSON file
-uploadQuestionsInput.addEventListener("change", (event) => {
-    const file = event.target.files[0];
+// Upload questions from a JSON file
+uploadQuestionsInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+
     if (file) {
         const reader = new FileReader();
-        reader.onload = function (e) {
-            try {
-                const loadedQuestions = JSON.parse(e.target.result);
-                if (Array.isArray(loadedQuestions) && loadedQuestions.length > 0) {
-                    questions = loadedQuestions;
-                    alert("Questions loaded successfully!"); // Confirm successful loading
-                } else {
-                    alert("Invalid file format!"); // Alert for invalid file format
-                }
-            } catch (error) {
-                alert("Error reading file. Make sure it's a valid JSON file."); // Alert for errors
-            }
+        reader.onload = function (event) {
+            const json = event.target.result;
+            questions = JSON.parse(json); // Parse the uploaded questions
+            populateEditDropdown(); // Refresh the edit dropdown with the uploaded questions
+            alert("Questions uploaded successfully!");
+
+            // After uploading, make sure to display Base64 images properly in the quiz
+            showQuestion(); 
         };
-        reader.readAsText(file); // Read the file as text
+        reader.readAsText(file);
     }
 });
+
+function loadQuestionForEditing(index) {
+    const currentQuestion = questions[index];
+
+    // Populate the form with the current question's data for editing
+    questionInput.value = currentQuestion.question;
+
+    // Reset the image file input, but keep the existing image in memory
+    document.getElementById("question-image-input").value = "";
+
+    // Remove the existing question image from the form if present (during editing, don't show the image)
+    const existingImageElement = document.getElementById("existing-question-image");
+    if (existingImageElement) {
+        existingImageElement.remove(); // Remove any previously displayed image
+    }
+    
+    // Populate the answer fields
+    answer1Input.value = currentQuestion.answers[0].text;
+    answer2Input.value = currentQuestion.answers[1].text;
+    answer3Input.value = currentQuestion.answers[2].text;
+    answer4Input.value = currentQuestion.answers[3].text;
+
+    correctAnswerSelect.value = currentQuestion.answers.findIndex(answer => answer.correct);
+
+    isEditing = true;
+    editIndex = index;
+
+    // Show Edit button and change its text to "Confirm Edit"
+    editButton.style.display = "block";
+    editButton.innerText = "Confirm Edit";
+}
 
 // Initialize the quiz on page load
 startQuiz();
