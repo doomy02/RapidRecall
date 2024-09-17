@@ -12,6 +12,7 @@ const uploadQuestionsInput = document.getElementById("upload-questions-input");
 const editQuestionSelect = document.createElement("select");
 editQuestionSelect.id = "edit-question-select";
 const backButton = document.getElementById("back-btn");
+const quizManagementContainer = document.getElementById("quiz-management");
 
 // Use the existing Edit button for confirming edits
 const editButton = document.getElementById("edit-btn");
@@ -240,6 +241,7 @@ function clearFormFields() {
 startQuizBtn.addEventListener("click", () => {
     homePage.style.display = "none";
     quizApp.style.display = "block";
+    quizManagementContainer.style.display = "none";
     score = 0; // Reset score
     currentQuestionIndex = 0; // Reset question index
     showQuestion();
@@ -273,6 +275,7 @@ function startQuiz() {
 backButton.addEventListener("click", () => {
     quizApp.style.display = "none";  // Hide the quiz section
     homePage.style.display = "block";  // Show the home page
+    quizManagementContainer.style.display = "block";
 });
 
 // Modify the showQuestion function to handle Base64 images

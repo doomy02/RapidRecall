@@ -10,11 +10,45 @@ body {
     background: #001e4d;
 }
 
+/* Container Wrapper to position elements horizontally */
+.container-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Align items at the start of the flex container */
+    width: 90%;
+    max-width: 1200px; /* Adjust as needed */
+    margin: 100px auto 0;
+}
+
+/* Styles for home-page and quiz-management containers */
+.home-page {
+    flex: 1;
+    background: #fff;
+    border-radius: 10px;
+    padding: 30px;
+    margin-right: 20px; /* Space between the two containers */
+}
+
+.quiz-management {
+    width: 300px; /* Adjust width as needed */
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+}
+
+/* Common container styles */
+.container {
+    max-width: 600px; /* Adjust the width as needed */
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 10px;
+    padding: 30px;
+}
+
+/* Home Page and App Specific Styles */
 .app, .home-page {
     background: #fff;
-    width: 90%;
-    max-width: 600px;
-    margin: 100px auto 0;
     border-radius: 10px;
     padding: 30px;
 }
@@ -162,6 +196,26 @@ input[type="file"]::file-selector-button:hover {
     color: #fff;
 }
 
+/* Quiz Management Button Styles */
+.quiz-management button {
+    text-align: center;
+    background-color: #001e4d;
+    color: #fff;
+    font-weight: 500;
+    width: 100%;
+    border: 0;
+    padding: 10px;
+    margin: 10px auto;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.quiz-management button:hover {
+    background-color: #222;
+    color: #fff;
+}
+
 /* Quiz Section Styles */
 .quiz h2 {
     font-size: 20px;
@@ -219,10 +273,4 @@ input[type="file"]::file-selector-button:hover {
 #next-btn:hover {
     background-color: #222;
     color: #fff;
-}
-
-.button-container {
-    display: flex;
-    justify-content: center;
-    width: 100%;
 }
