@@ -13,6 +13,7 @@ const editQuestionSelect = document.createElement("select");
 editQuestionSelect.id = "edit-question-select";
 const backButton = document.getElementById("back-btn");
 const quizManagementContainer = document.getElementById("quiz-management");
+const randomizeButton = document.getElementById("randomize-btn");
 
 // Use the existing Edit button for confirming edits
 const editButton = document.getElementById("edit-btn");
@@ -35,8 +36,9 @@ const answer3Input = document.getElementById("answer3-input");
 const answer4Input = document.getElementById("answer4-input");
 const correctAnswerSelect = document.getElementById("correct-answer");
 
-// Hide the Edit button initially
+// Hide the Edit and Randomize button initially
 editButton.style.display = "none";
+randomizeButton.style.display = "none";
 
 // Insert dropdown to select question to edit
 const editSection = document.createElement("div");
@@ -399,6 +401,7 @@ saveQuestionsBtn.addEventListener("click", () => {
 // Upload questions from a JSON file
 uploadQuestionsBtn.addEventListener("click", () => {
     uploadQuestionsInput.click(); // Trigger the file input click event
+    randomizeButton.style.display = "block";
 });
 
 // Upload questions from a JSON file
@@ -418,6 +421,24 @@ uploadQuestionsInput.addEventListener("change", (e) => {
         };
         reader.readAsText(file);
     }
+});
+
+// Fisher-Yates shuffle algorithm to randomize questions
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+// Randomize the questions in the question set
+randomizeButton.addEventListener("click", () => {
+    shuffleArray(questions); // Shuffle the questions array
+    currentQuestionIndex = 0; // Reset question index
+    alert("Questions have been randomized!");
+
+    // Start quiz from the beginning with the randomized questions
+    startQuiz();
 });
 
 function loadQuestionForEditing(index) {
